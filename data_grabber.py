@@ -71,7 +71,7 @@ BASELINE_VARS = [
 ]
 
 DEMO_VARS = [
-    'race_ethnicity_c',
+    'race_ethnicity_c_bl',
     'household_income_4bins_tp',
     'rel_family_id',
     "demo_sex_v2_bl",
