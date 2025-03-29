@@ -36,7 +36,7 @@ VARS = [
     # sleep quality -- this is sleep disturbance scale
     # will prob use Devyn's sleep quality code instead, 
     'sds_p_ss_total',
-
+    'physical_activity1_y',
     # avg cortical thickness?
     "pds_p_ss_female_category_2", 
     "pds_p_ss_male_category_2", 
