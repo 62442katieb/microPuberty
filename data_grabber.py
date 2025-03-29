@@ -596,5 +596,6 @@ m_pds_avg.name = 'pds_p_average'
 
 
 big_dat = pd.concat([big_dat, pd.concat([f_pds_avg, m_pds_avg], axis=0)], axis=1)
+big_dat = big_dat.replace([999, -np.inf, np.inf], np.nan)
 
 big_dat.to_pickle(join(PROJ_DIR, DAT_DIR, 'dset.pkl'))
