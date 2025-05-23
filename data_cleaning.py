@@ -195,7 +195,7 @@ for sex in SEXES:
     good_dmri = abcdw.dmri_qc(temp_df, motion_thresh=2)
     temp_temp = temp_df.filter(like='dmri_rsi', axis=1).loc[good_dmri]
     for year in YEARS:
-        good_dmri = abcdw.dmri_qc(temp_df, motion_thresh=2)
+        #good_dmri = abcdw.dmri_qc(temp_df, motion_thresh=2)
         ano = year.split("_")[0]
         temp2 = temp_df.xs(year, level=1)
         

@@ -333,7 +333,6 @@ MRI_VARS = [
     'dmri_rsirnd_fib_sifclh', #  left striatal inferior frontal cortex
     'dmri_rsirnd_fib_ifsfcrh', #  right inferior frontal superior frontal cortex
     'dmri_rsirnd_fib_ifsfclh', #  left inferior frontal superior frontal cortex
-    'dmri_rsirnd_scs_lvlh', # left-lateral-ventricle
     'dmri_rsirnd_scs_cbwmlh', # left-cerebellum-white-matter
     'dmri_rsirnd_scs_cbclh', # left-cerebellum-cortex
     'dmri_rsirnd_scs_tplh', # left-thalamus-proper
