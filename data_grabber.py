@@ -48,9 +48,15 @@ VARS = [
 
     'pds_f4_p',
     'pds_f5b_p',
-    'pds_f6_p',
     'pds_m4_p',
     'pds_m5_p',
+    'hormone_sal_wake_y',
+    'hormone_sal_caff_y',
+    'hormone_sal_active',
+    'hormone_sal_start_y',
+    'hormone_sal_end_y',
+    'hormons_sal_freeztemp_y',
+    'hormone_sal_freezer_y'
 ]
 
 BASELINE_VARS = [
@@ -588,14 +594,18 @@ m_pds = [
 
 big_dat['pds_p_ss_category_2'] = big_dat['pds_p_ss_female_category_2'].fillna(0) + big_dat['pds_p_ss_male_category_2'].fillna(0)
 big_dat['pds_p_ss_category_2'].replace({0: np.nan}, inplace=True)
+big_dat = big_dat.replace([999, -np.inf, np.inf], np.nan)
 
-f_pds_avg = big_dat.loc[fppts][f_pds].mean(axis=1)
+f_pds_avg = big_dat.loc[fppts][f_pds].T.mean()
 f_pds_avg.name = 'pds_p_average'
-m_pds_avg = big_dat.loc[mppts][m_pds].mean(axis=1)
+m_pds_avg = big_dat.loc[mppts][m_pds].T.mean()
 m_pds_avg.name = 'pds_p_average'
 
+temp_pds = pd.concat(
+    [f_pds_avg, m_pds_avg], axis=0
+)
 
-big_dat = pd.concat([big_dat, pd.concat([f_pds_avg, m_pds_avg], axis=0)], axis=1)
-big_dat = big_dat.replace([999, -np.inf, np.inf], np.nan)
+big_dat = pd.concat([big_dat, temp_pds], axis=1)
+
 
 big_dat.to_pickle(join(PROJ_DIR, DAT_DIR, 'dset.pkl'))
