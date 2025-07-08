@@ -23,13 +23,13 @@ FIG_DIR = "figures"
 
 
 SEXES = [
-    #'F',
+    'F',
     'M'
 ]
 
 WAVES = [
     0,
-    #2
+    2
 ]
 
 hormones = {
@@ -180,7 +180,7 @@ for sex in SEXES:
                     )
 
                     sorted_importances_idx = r.importances_mean.argsort()
-                    
+                    # importance is scaled by model performance
                     importance_temp = pd.DataFrame(
                         r.importances[sorted_importances_idx].T,
                         columns=X_test.columns[sorted_importances_idx],
