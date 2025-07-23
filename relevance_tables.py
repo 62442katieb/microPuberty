@@ -43,13 +43,16 @@ RSIs = [
     'rnd'
 ]
 
-
 WAVES = [
     0,
     2
 ]
 
 hemis = ['left', 'right']
+
+f = open('mri_varnames.json',)
+
+mri_varnames = json.load(f)
 
 importance_mean = pd.DataFrame(dtype=float)
 importance_sdev = pd.DataFrame(dtype=float)
@@ -64,7 +67,7 @@ for rsi in RSIs:
                     name = f"{sex}_{wave}-{rsi}_{hormone}"
                     dat = pd.read_pickle(
                         join(PROJ_DIR, OUT_DIR, f'{sex}-{wave}-{hormone}-{rsi}-region_by_score.pkl')
-                    )
+                    ).drop('dmri_rsirnd_scs_lvlh', axis=0)
                     print(rsi, sex, hormone, wave)
                     temp_mean = dat.filter(like='filtered').mean(axis=1)
                     temp_mean.name = name
@@ -104,6 +107,8 @@ rni_mean = importance_mean.filter(
 ).dropna(
     how='all', axis=0
 )
+for i in rni_mean.index:
+    rni_mean.at[i, 'region_name'] = mri_varnames['MRI_VARS'][i]
 rni_mean.to_csv(
     join(PROJ_DIR, OUT_DIR, "rni_mean_importance.csv")
 )
@@ -115,6 +120,8 @@ rnd_mean = importance_mean.filter(
 ).dropna(
     how='all', axis=0
 )
+for i in rnd_mean.index:
+    rnd_mean.at[i, 'region_name'] = mri_varnames['MRI_VARS'][i]
 rnd_mean.to_csv(
     join(PROJ_DIR, OUT_DIR, "rnd_mean_importance.csv")
 )
@@ -124,6 +131,8 @@ rni_sdev = importance_sdev.filter(
 ).dropna(
     how='all', axis=1
 )
+for i in rni_sdev.index:
+    rni_sdev.at[i, 'region_name'] = mri_varnames['MRI_VARS'][i]
 rni_sdev.to_csv(
     join(PROJ_DIR, OUT_DIR, "rni_sdev_importance.csv")
 )
@@ -133,6 +142,8 @@ rnd_sdev = importance_sdev.filter(
 ).dropna(
     how='all', axis=1
 )
+for i in rnd_sdev.index:
+    rnd_sdev.at[i, 'region_name'] = mri_varnames['MRI_VARS'][i]
 rnd_sdev.to_csv(
     join(PROJ_DIR, OUT_DIR, "rnd_sdev_importance.csv")
 )
@@ -163,7 +174,7 @@ for i in rni_mean.index:
                 rni_table_for_paper.at[i,j] = f"{np.round(mean, 3)} ± {np.round(sdev, 3)} ({np.round(pcnt, 0)}%)"
         except Exception as e:
             print(i,j,e)
-rni_table_for_paper.to_csv(
+rni_table_for_paper.rename(mri_varnames['MRI_VARS'], axis=0).to_csv(
     join(PROJ_DIR, OUT_DIR, 'rni_importance_table.csv')
 )
 
@@ -176,9 +187,9 @@ for i in rnd_mean.index:
             sdev = rnd_sdev.loc[i][j]
             pcnt = rnd_pcnt.loc[i][j]
             if mean > 0:
-                rni_table_for_paper.at[i,j] = f"{np.round(mean, 3)} ± {np.round(sdev, 3)} ({np.round(pcnt, 0)}%)"
+                rnd_table_for_paper.at[i,j] = f"{np.round(mean, 3)} ± {np.round(sdev, 3)} ({np.round(pcnt, 0)}%)"
         except Exception as e:
             print(i,j,e)
-rnd_table_for_paper.to_csv(
+rnd_table_for_paper.rename(mri_varnames['MRI_VARS'], axis=0).to_csv(
     join(PROJ_DIR, OUT_DIR, 'rnd_importance_table.csv')
 )
