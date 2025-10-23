@@ -46,6 +46,7 @@ destrieux = datasets.fetch_atlas_surf_destrieux()
 subcortic = datasets.fetch_atlas_harvard_oxford("sub-maxprob-thr50-2mm")
 subcort_array = subcortic.maps.get_fdata()
 
+
 rni = [
     'dmri_rsirnigm_cdx_gsfmlh', #	  left hemisphere fronto-marginal gyrus and sulcus
     'dmri_rsirnigm_cdx_gsoilh', #	  left hemisphere inferior occipital gyrus and sulcus
@@ -493,7 +494,9 @@ ages = [
     '11-13 years'
 ]
 
-
+'''
+filter regions that are only important in a few models
+'''
 hemis = ['left', 'right']
 
 for rsi in RSIs:
@@ -502,30 +505,80 @@ for rsi in RSIs:
             for wave in WAVES:
                 try:
                     # load in relevance scores
+                    cmap = hormone_dict[hormone.split('_')[1]]['cmap']
+                    abbrev = hormone_dict[hormone.split('_')[1]]['name']
+                    vmax = 0.14
+                    threshold = 0.001
+                    label = f'{SEXES[sex]}, {ages[wave]}: {abbrev}-related {rsi.upper()}'
                     dat = pd.read_pickle(
                         join(PROJ_DIR, OUT_DIR, f'{sex}-{wave}-{hormone}-{rsi}-region_by_score.pkl')
                     )
                     print('Loaded ', join(PROJ_DIR, OUT_DIR, f'{sex}-{wave}-{hormone}-{rsi}-region_by_score.pkl'))
-                    dat_hormone = dat[hormone].replace({np.nan: 0}).T.describe().T[['mean', 'std', '25%', '50%']]
-                    dat_puberty = dat['pds'].replace({np.nan: 0}).T.describe().T[['mean', 'std', '25%', '50%']]
+                    dat.drop('dmri_rsirnd_scs_lvlh', axis=0)
+                    #dat_hormone = dat[hormone].T.describe().T[['mean', 'std', '25%', '50%']]
+                    #dat_puberty = dat['pds'].T.describe().T[['mean', 'std', '25%', '50%']]
+                    dat_hormone = pd.Series(
+                        index=dat.index,
+                        name=f'{sex} {ages[wave]} {hormone} {rsi}'
+                    )
+                    for i in dat_hormone.index:
+                        nans = dat.loc[i][hormone].isna().sum()
+                        if nans / len(dat.loc[i][hormone]) < 0.5:
+                            dat_hormone.loc[i] = dat[hormone].loc[i].dropna().mean()
+                        else:
+                            dat_hormone.loc[i] = 0
 
                     rni_subcort = pd.DataFrame(index=list(subcort.keys()))
                     for i in rni_subcort.index:
                         rni_subcort.at[i, 'label'] = subcort[i]
-                        rni_subcort.at[i, hormone]  = dat_hormone.loc[i]['mean']
+                        rni_subcort.at[i, hormone]  = dat_hormone.loc[i]
                     rni_subcort.to_csv(join(PROJ_DIR, OUT_DIR, f'{sex}-{wave}-{hormone}-{rsi}-subcort.csv'))
-                    rnd_f_0 = np.zeros_like(subcort_array)
-                    for var in subcort.keys():
-                        region = subcort[var]
-                        index = subcortic.labels.index(region)
-                        rnd_f_0 = np.where(subcort_array == index, rni_subcort.loc[var][hormone], rnd_f_0)
-                    subcort_nifti = nib.Nifti1Image(rnd_f_0, subcortic.maps.affine, subcortic.maps.header)
-                    
+                    if rni_subcort.sum(numeric_only=True)[hormone] > 0:
+                        rnd_f_0 = np.zeros_like(subcort_array)
+                        for var in subcort.keys():
+                            region = subcort[var]
+                            index = subcortic.labels.index(region)
+                            rnd_f_0 = np.where(subcort_array == index, rni_subcort.loc[var][hormone], rnd_f_0)
+                        subcort_nifti = nib.Nifti1Image(rnd_f_0, subcortic.maps.affine, subcortic.maps.header)
+                        
+                        xyz = plotting.plot_roi(
+                            subcort_nifti, cmap=cmap, draw_cross=False,
+                            threshold=threshold, vmax=vmax, black_bg=False, 
+                            title=label, colorbar=False, 
+                            output_file=join(
+                                PROJ_DIR, 
+                                FIG_DIR, 
+                                f'{sex}-{wave}-{hormone.split("_")[1]}-{rsi}-subcort.png'
+                            )
+                        )
+                    else:
+                        pass
 
                     wm_dhea = pd.DataFrame(index=list(fib_to_jhu.keys()))
                     for i in wm_dhea.index:
                         wm_dhea.at[i, 'jhu'] = fib_to_jhu[i]
-                        wm_dhea.at[i, hormone] = dat_hormone.loc[i]['mean']
+                        wm_dhea.at[i, hormone] = dat_hormone.loc[i]
+                    if wm_dhea.sum(numeric_only=True)[hormone] > 0:
+                        rnd_f_0 = np.zeros_like(subcort_array)
+                        for var in subcort.keys():
+                            region = subcort[var]
+                            index = subcortic.labels.index(region)
+                            rnd_f_0 = np.where(subcort_array == index, rni_subcort.loc[var][hormone], rnd_f_0)
+                        subcort_nifti = nib.Nifti1Image(rnd_f_0, subcortic.maps.affine, subcortic.maps.header)
+                        
+                        xyz = plotting.plot_roi(
+                            subcort_nifti, cmap=cmap, draw_cross=False,
+                            threshold=threshold, vmax=vmax, black_bg=False, 
+                            title=label, colorbar=False, 
+                            output_file=join(
+                                PROJ_DIR, 
+                                FIG_DIR, 
+                                f'{sex}-{wave}-{hormone.split("_")[1]}-{rsi}-subcort.png'
+                            )
+                        )
+                    else:
+                        pass # will fix this when I learn how to plot white matter
+
                     wm_dhea.replace(0, np.nan).to_csv(join(PROJ_DIR, OUT_DIR, f'{sex}-{wave}-{hormone}-{rsi}-wm_jhu.csv'))
 
                     rsi_df = mapping.copy()
@@ -539,13 +592,13 @@ for rsi in RSIs:
                         # left first
                         #print('hi!')
                         abcd_name = rsi_df.loc[i][f'{rsi}_left']
-                        mean_imp = dat_hormone.loc[abcd_name]['mean']
+                        mean_imp = dat_hormone.loc[abcd_name]
                         rsi_df.at[i,f'{hormone}_left'] = mean_imp
                         indices = np.where(destrieux['map_left'] == i)
                         rsi_left.loc[indices] = mean_imp
 
                         abcd_name = rsi_df.loc[i][f'{rsi}_right']
-                        mean_imp = dat_hormone.loc[abcd_name]['mean']
+                        mean_imp = dat_hormone.loc[abcd_name]
                         rsi_df.at[i,f'{hormone}_left'] = mean_imp
                         indices = np.where(destrieux['map_left'] == i)
                         rsi_right.loc[indices] = mean_imp
@@ -554,96 +607,92 @@ for rsi in RSIs:
                         'left': rsi_left.values,
                         'right': rsi_right.values,
                     }
-                    cmap = hormone_dict[hormone.split('_')[1]]['cmap']
-                    abbrev = hormone_dict[hormone.split('_')[1]]['name']
-                    vmax = np.max([rsi_left.values, rsi_right.values])
-                    label = f'{SEXES[sex]}, {ages[wave]}: {abbrev}-related {rsi.upper()}'
-                    xyz = plotting.plot_roi(
-                        subcort_nifti, cmap=cmap, draw_cross=False,
-                        threshold=0.001, vmax=vmax, black_bg=False, 
-                        title=label)
-                    fig,ax = plt.subplots(
-                        nrows=2, ncols=2, figsize=(6,4),
-                        subplot_kw={"projection": "3d"}
-                    )
-                    fig.suptitle(label)
-                    plt.tight_layout(w_pad=-10, h_pad=-2)
-                    g = plotting.plot_surf_stat_map(
-                        fsaverage[f'pial_left'], 
-                        #destrieux['map_left'], 
-                        vals['left'],
-                        hemi='left', 
-                        cmap=cmap,
-                        bg_map=fsaverage[f'sulc_left'],
-                        bg_on_data=True,
-                        threshold=0.01,
-                        avg_method='median',
-                        colorbar=False,
-                        vmax=vmax,
-                        #engine='plotly',
-                        figure=fig,
-                        axes=ax[0,0]
-                    )
-                    h = plotting.plot_surf_stat_map(
-                        fsaverage[f'pial_left'], 
-                        #destrieux['map_left'], 
-                        vals['left'],
-                        hemi='right', 
-                        cmap=cmap,
-                        bg_map=fsaverage[f'sulc_left'],
-                        bg_on_data=True,
-                        threshold=0.01,
-                        avg_method='median',
-                        colorbar=False,
-                        vmax=vmax,
-                        #engine='plotly',
-                        figure=fig,
-                        axes=ax[1,0]
-                    )
-                    k = plotting.plot_surf_stat_map(
-                        fsaverage[f'pial_right'], 
-                        #destrieux['map_left'], 
-                        vals['right'],
-                        hemi='right', 
-                        cmap=cmap,
-                        bg_map=fsaverage[f'sulc_right'],
-                        bg_on_data=True,
-                        threshold=0.01,
-                        colorbar=False,
-                        avg_method='median',
-                        vmax=vmax,
-                        #engine='plotly',
-                        figure=fig,
-                        axes=ax[0,1]
-                    )
-                    l = plotting.plot_surf_stat_map(
-                        fsaverage[f'pial_right'], 
-                        #destrieux['map_left'], 
-                        vals['right'],
-                        hemi='left', 
-                        cmap=cmap,
-                        bg_map=fsaverage[f'sulc_right'],
-                        bg_on_data=True,
-                        threshold=0.01,
-                        avg_method='median',
-                        colorbar=False,
-                        vmax=vmax,
-                        #engine='plotly',
-                        figure=fig,
-                        axes=ax[1,1]
-                    )
+                    if sum(rsi_left.values) + sum(rsi_right.values) > 0:
                     
-                    print('saving...')
-                    fig.savefig(
-                        join(
-                            PROJ_DIR, 
-                            FIG_DIR, 
-                            f'{sex}-{wave}-{hormone.split("_")[1]}-{rsi}-cortex.png'
-                        ),
-                        dpi=400,
-                        facecolor='#FFFFFF',
-                        bbox_inches='tight'
-                    )
+                        fig,ax = plt.subplots(
+                            nrows=2, ncols=2, figsize=(6,4),
+                            subplot_kw={"projection": "3d"}
+                        )
+                        fig.suptitle(label)
+                        plt.tight_layout(w_pad=-10, h_pad=-2)
+                        g = plotting.plot_surf_stat_map(
+                            fsaverage[f'pial_left'], 
+                            #destrieux['map_left'], 
+                            vals['left'],
+                            hemi='left', 
+                            cmap=cmap,
+                            bg_map=fsaverage[f'sulc_left'],
+                            bg_on_data=True,
+                            threshold=0.01,
+                            avg_method='median',
+                            colorbar=False,
+                            vmax=vmax,
+                            #engine='plotly',
+                            figure=fig,
+                            axes=ax[0,0]
+                        )
+                        h = plotting.plot_surf_stat_map(
+                            fsaverage[f'pial_left'], 
+                            #destrieux['map_left'], 
+                            vals['left'],
+                            hemi='right', 
+                            cmap=cmap,
+                            bg_map=fsaverage[f'sulc_left'],
+                            bg_on_data=True,
+                            threshold=0.01,
+                            avg_method='median',
+                            colorbar=False,
+                            vmax=vmax,
+                            #engine='plotly',
+                            figure=fig,
+                            axes=ax[1,0]
+                        )
+                        k = plotting.plot_surf_stat_map(
+                            fsaverage[f'pial_right'], 
+                            #destrieux['map_left'], 
+                            vals['right'],
+                            hemi='right', 
+                            cmap=cmap,
+                            bg_map=fsaverage[f'sulc_right'],
+                            bg_on_data=True,
+                            threshold=0.01,
+                            colorbar=False,
+                            avg_method='median',
+                            vmax=vmax,
+                            #engine='plotly',
+                            figure=fig,
+                            axes=ax[0,1]
+                        )
+                        l = plotting.plot_surf_stat_map(
+                            fsaverage[f'pial_right'], 
+                            #destrieux['map_left'], 
+                            vals['right'],
+                            hemi='left', 
+                            cmap=cmap,
+                            bg_map=fsaverage[f'sulc_right'],
+                            bg_on_data=True,
+                            threshold=0.01,
+                            avg_method='median',
+                            colorbar=False,
+                            vmax=vmax,
+                            #engine='plotly',
+                            figure=fig,
+                            axes=ax[1,1]
+                        )
+                        
+                        print('saving...')
+                        fig.savefig(
+                            join(
+                                PROJ_DIR, 
+                                FIG_DIR, 
+                                f'{sex}-{wave}-{hormone.split("_")[1]}-{rsi}-cortex.png'
+                            ),
+                            dpi=400,
+                            facecolor='#FFFFFF',
+                            bbox_inches='tight'
+                        )
+                    else:
+                        pass
                     fig, ax = plt.subplots(figsize=(4, .5), layout='constrained')
                     norm = mpl.colors.Normalize(vmin=0.01, vmax=vmax)
                     fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap),

@@ -58,6 +58,8 @@ importance_mean = pd.DataFrame(dtype=float)
 importance_sdev = pd.DataFrame(dtype=float)
 importance_pcnt = pd.DataFrame(dtype=float)
 
+model_desc = pd.DataFrame(dtype=float)
+
 for rsi in RSIs:
     for sex in SEXES:
         for hormone in HORMONES[sex]:
@@ -65,6 +67,13 @@ for rsi in RSIs:
                 try:
                     # load in relevance scores
                     name = f"{sex}_{wave}-{rsi}_{hormone}"
+                    model_res = pd.read_pickle(
+                        join(PROJ_DIR, OUT_DIR, f"{sex}-{wave}-{hormone}-{rsi}-model_stats.pkl")
+                    )
+                    model_desc.at[name, 'l1:l2 mode'] = model_res['l1:l2'].describe()['top']
+                    model_desc.at[name, 'score_mean'] = model_res['score'].mean()
+                    model_desc.at[name, 'score_sdev'] = model_res['score'].std()
+
                     dat = pd.read_pickle(
                         join(PROJ_DIR, OUT_DIR, f'{sex}-{wave}-{hormone}-{rsi}-region_by_score.pkl')
                     ).drop('dmri_rsirnd_scs_lvlh', axis=0)
@@ -99,6 +108,7 @@ for rsi in RSIs:
                 except:
                     pass
 importance_mean.to_csv(join(PROJ_DIR, OUT_DIR, 'importance_means.csv'))
+model_desc.to_csv(join(PROJ_DIR, OUT_DIR, 'model_descriptives.csv'))
 
 rni_mean = importance_mean.filter(
     like='rsirni', axis=0
