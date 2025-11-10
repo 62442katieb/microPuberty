@@ -8,13 +8,16 @@ from nilearn import datasets, plotting
 sns.set(context='paper', style='white')
 
 RECEPTORS = [
-    'ESR2', 'AR',
+    'AR', 'ESR1', 'ESR2', 'GPER',
     'GABRA1','GRIN3A','GRIN2D'
 ]
 
-allen_brain_all = '/Users/katherine.b/Dropbox/Projects/kangaroo/microPuberty/all_receptors.csv'
+allen_brain_all = '/Users/katherine.b/Dropbox/Projects/kangaroo/microPuberty/all_plus_extra_estrogen.csv'
 
-er_all = pd.read_csv(allen_brain_all, index_col=[0,1], header=0)
+er_all = pd.read_csv(allen_brain_all, 
+                     #index_col=[0,1], 
+                     header=0)
+er_all.index = pd.MultiIndex.from_frame((er_all[['donor_id', 'structure_id']]))
 er_all = er_all.sort_index()
 
 er_all['Brain Region'] = er_all['structure_abbreviation'].replace(
@@ -87,10 +90,23 @@ region_order = [
     'Crbllm',
 ]
 
+tol_rainbow = ["#E8ECFB", "#D9CCE3", "#D1BBD7", "#CAACCB", "#BA8DB4",
+                "#AE76A3", "#AA6F9E", "#994F88", "#882E72", "#1965B0",
+                "#437DBF", "#5289C7", "#6195CF", "#7BAFDE", "#4EB265",
+                "#90C987", "#CAE0AB", "#F7F056", "#F7CB45", "#F6C141",
+                "#F4A736", "#F1932D", "#EE8026", "#E8601C", "#E65518",
+                "#DC050C", "#A5170E", "#72190E", "#42150A"]
+tol_indices = [3, 5, 7, 9, 10, 12, 14, 15, 16, 17, 18, 20, 22, 24, 26, 28]
+tol_indices = [int(i - 1) for i in tol_indices]
+tol_list = [tol_rainbow[i] for i in tol_indices]
+tol_pal = sns.color_palette(tol_list)
+sns.palplot(tol_pal)
+
+
 fig,ax = plt.subplots(
-    nrows=5, 
+    nrows=7, 
     ncols=2, 
-    figsize=(7,10), 
+    figsize=(5,9), 
     sharex='col',
     sharey='row',
     #layout='tight'
@@ -104,7 +120,10 @@ for receptor in RECEPTORS:
         x='Brain Region',
         y=receptor,
         order=region_order,
-        ax=temp_ax
+        ax=temp_ax,
+        hue='Brain Region',
+        palette=tol_pal,
+        hue_order=region_order
     )
     temp_ax.axhline(
         puberty_brains[receptor].median(), 
@@ -128,7 +147,10 @@ for receptor in RECEPTORS:
         x='Brain Region',
         y=receptor,
         order=region_order,
-        ax=temp_ax
+        ax=temp_ax,
+        hue='Brain Region',
+        palette=tol_pal,
+        hue_order=region_order
     )
     temp_ax.axhline(
         adult_brains[receptor].median(), 
@@ -141,6 +163,7 @@ for receptor in RECEPTORS:
             #horizontalalignment='right'
         )
     sns.despine()
+
 
 fig.savefig(
     'receptors_by_region.png',
